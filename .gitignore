@@ -1,0 +1,39 @@
+# ==============================================================================
+# SystemPilot - GitIgnore Configuration
+# ==============================================================================
+
+# --- Python & Package Managers (.venv / uv) ---
+.venv/
+venv/
+ENV/
+.uv_cache/
+
+# --- Environment Variables & Security (CRUCIAL) ---
+.env
+.env.local
+.env.*.local
+
+# --- Python Cache & Compiled Files ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Operating System Files (Ubuntu / Linux) ---
+.DS_Store
+*.swp
+*~
+.directory
+.lost+found/
+
+# --- Application Logs & Temp Files ---
+*.log
+logs/
+tmp/
+
+# IDE
+.vscode/
+.idea/
