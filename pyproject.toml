@@ -5,6 +5,8 @@ description = "An ambitious yet achievable local and cloud-powered AI desktop as
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "openai>=2.46.0",
     "prompt-toolkit>=3.0.52",
+    "python-dotenv>=1.2.2",
     "rich>=15.0.0",
 ]

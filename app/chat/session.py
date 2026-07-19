@@ -1,12 +1,14 @@
 import sys
 
 from app.chat.cli import CommandLineInterface
+from app.agent.engine import AgentEngine
 
 class ChatSession:
     def __init__(self) -> None:
         '''Initialize single ton session orchestrator linking UI and routing'''
         self.cli = CommandLineInterface()
         self.is_running = True
+        self.ai_engine = AgentEngine()
 
     def start(self):
         '''Execute the core application lifecycle state machine'''
@@ -38,5 +40,7 @@ class ChatSession:
         self.cli.print_exit()
         sys.exit(0)
 
-    def _process_ai_request(self, prompt: str) -> None:
-      pass
+    def _process_ai_request(self, user_prompt: str) -> None:
+            """Fetch the response generator from the engine and delegate rendering to CLI."""
+            response_stream = self.ai_engine.get_response(prompt=user_prompt)
+            self.cli.print_stream(response_stream)
