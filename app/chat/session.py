@@ -41,6 +41,6 @@ class ChatSession:
         sys.exit(0)
 
     def _process_ai_request(self, user_prompt: str) -> None:
-        ai_response = self.ai_engine.get_response(prompt=user_prompt)
-        if ai_response:
-            self.cli.print_markdown(ai_response)
+            """Fetch the response generator from the engine and delegate rendering to CLI."""
+            response_stream = self.ai_engine.get_response(prompt=user_prompt)
+            self.cli.print_stream(response_stream)

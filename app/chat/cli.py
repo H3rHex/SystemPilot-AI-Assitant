@@ -2,6 +2,7 @@ import os
 import sys
 
 from rich.console import Console
+from rich.live import Live
 from rich.markdown import Markdown
 from prompt_toolkit import PromptSession
 from prompt_toolkit.key_binding import KeyBindings 
@@ -62,6 +63,20 @@ class CommandLineInterface:
         self.console.print(ASSISTANT_PREFIX)
         self.console.print(Markdown(text))
         self.console.print('\n' + '-' * 50)
+    
+    def print_stream(self, stream_generator) -> str:
+        """Render an incoming stream of tokens as live Markdown."""
+        # Imprime el prefijo del asistente (ajusta el texto a tu gusto)
+        self.console.print("\n[bold cyan]🤖 SystemPilot:[/bold cyan]")
+        
+        full_text = ""
+        with Live(console=self.console, refresh_per_second=12, auto_refresh=False) as live:
+            for token in stream_generator:
+                full_text += token
+                live.update(Markdown(full_text), refresh=True)
+                
+        self.console.print() # Salto de línea final tras terminar el stream
+        return full_text
     
 
         
