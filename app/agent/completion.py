@@ -2,6 +2,7 @@ import json
 from typing import Generator, Any
 from openai import OpenAI
 from app.agent.mcp_adapter import MCPAdapter
+from app.agent.config import DEV_MODE   
 
 class StreamToolBuffer:
     """Accumulates streaming tool call chunks into OpenAI-formatted payloads."""
@@ -114,8 +115,10 @@ class CompletionHandler:
             args = json.loads(raw_args) if raw_args else {}
         except json.JSONDecodeError:
             args = {}
-
-        yield f"\n\n[dim]Executing tool: {fn_name}...[/dim]\n\n"
+        
+        if DEV_MODE:
+            yield f"\n\n[dim]Executing tool: {fn_name}...[/dim]\n\n"
+            
         result = self.mcp.execute_tool(fn_name, args)
 
         messages.append({
