@@ -1,13 +1,13 @@
+# app/agent/config.py
 import os
 from dotenv import load_dotenv
+from pydantic import SecretStr
 
 load_dotenv()
 
-LLM_BASE_URL: str | None = os.getenv("LLM_BASE_URL")
-LLM_API_KEY: str | None = os.getenv("LLM_API_KEY")
-LLM_MODEL_NAME:str | None = os.getenv("LLM_MODEL_NAME")
-LLM_STREAMING: bool = os.getenv("LLM_STREAMING", "false").lower() == "true"
+raw_api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or "ollama"
 
-SYSTEM_PROMPT:str = "You are SystemPilot, a native system copilot for SO. Keep responses concise, clear, and focused on technical accuracy."
+LLM_API_KEY = SecretStr(raw_api_key)
 
-DEV_MODE = False # For logging
+LLM_BASE_URL = os.getenv("LLM_BASE_URL") or os.getenv("OPENAI_BASE_URL")
+LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME") or os.getenv("MODEL_NAME") or "gpt-4o-mini"
