@@ -9,10 +9,10 @@ class AgentState(TypedDict):
     messages:list[BaseMessage] # Message history
     
     needs_tool:bool 
-    selected_tools: dict[str, Any] | None # Ai model selected tool list
+    selected_tools: list[dict[str, Any]] # Ai model selected tool list
     discarded_tools: list[str] # Rejected tools --> (when the selected tool is not suitable for the purpose)
 
-    tool_result: str | None # MCP Server tool response
+    tool_results: list[dict[str, Any]] # MCP Server tool response
     draft_response: str # Draft node, generated text
     final_response:str # Final response text
 
