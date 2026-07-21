@@ -1,82 +1,84 @@
-# app/agent/nodes/tool_getter.py
+# app/agent/nodes/tool_reviewer.py
 from typing import Any, cast
 from pydantic import BaseModel, Field
 from langchain_core.messages import SystemMessage, HumanMessage
 from app.agent.state import AgentState
 from app.agent.llm import get_llm
-from app.agent.mcp_adapter import get_mcp_tools
 from app.agent.config import MAX_TOOLS_PER_STEP
 
-class ToolCall(BaseModel):
-    tool_name: str = Field(
-        description="The exact name of the selected tool."
+class ReviewerOutput(BaseModel):
+    approved: bool = Field(
+        description="True if the proposed tool sequence is safe, relevant, and correctly parametrized. False otherwise."
     )
-    tool_args: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Dictionary containing arguments matching the tool's schema."
-    )
-
-class ToolSelectionOutput(BaseModel):
-    tools: list[ToolCall] = Field(
+    discard_tools: list[str] = Field(
         default_factory=list,
-        max_length=MAX_TOOLS_PER_STEP,
-        description=f"Ordered list of tools required (MAXIMUM {MAX_TOOLS_PER_STEP}). Empty if no tools fit."
+        description="List of tool names from the proposal that are inappropriate or failed validation."
     )
     reasoning: str = Field(
-        description="Explanation of why these specific tools and sequence were selected."
+        description="Detailed reasoning for approving or rejecting the execution plan."
     )
 
 llm = get_llm(temperature=0.0)
-structured_llm = llm.with_structured_output(ToolSelectionOutput)
+structured_llm = llm.with_structured_output(ReviewerOutput)
 
-SYSTEM_PROMPT = """You are the Tool Selection Module for SystemPilot.
+SYSTEM_PROMPT = """You are the Tool Reviewer and Safety Guardrail for SystemPilot.
 
-Your task is to analyze the user's request and select the necessary tools from the provided catalog required to fulfill the task.
+Your task is to review the proposed sequence of tools and their parameters against the user's original request.
 
-Rules:
-1. You can select between 1 and {max_tools} tools maximum. Order them in the exact logical execution sequence.
-2. You MUST select tools ONLY from the AVAILABLE TOOLS list below.
-3. Do NOT select tools that are explicitly marked as DISCARDED.
-4. Extract and provide all required arguments strictly conforming to each tool's expected schema.
-5. If no available tool matches the user's intent, return an empty tools list `[]`.
+Validation Rules:
+1. Ensure the selected tools are directly relevant to fulfilling the request.
+2. Confirm that the arguments provided for each tool are logically sound and valid.
+3. Reject execution if the tool sequence is nonsensical, redundant, or unsafe.
+4. If rejecting due to unsuitable tools, explicitly populate `discard_tools` with their names.
 
-AVAILABLE TOOLS:
-{tools_schema}
+ALWAYS respond using the required JSON schema."""
 
-DISCARDED TOOLS (DO NOT USE):
-{discarded_tools}
-"""
-
-async def tool_getter_node(state: AgentState) -> dict:
-    """Tool Getter Node: Selects one or multiple MCP tools with strict limit enforcement."""
+async def tool_reviewer_node(state: AgentState) -> dict:
+    """Tool Reviewer Node: Validates proposed tools and enforces max retry limits."""
     user_input = state["input"]
-    discarded = state.get("discarded_tools", [])
+    selected_tools = cast(list[dict[str, Any]], state.get("selected_tools", []))
+    current_retries = state.get("retry_count", 0)
     
-    all_tools = await get_mcp_tools()
-    available_tools = [t for t in all_tools if t["name"] not in discarded]
-    
-    tools_str = "\n".join([f"- {t['name']}: {t['description']} (Args: {t.get('inputSchema', {})})" for t in available_tools])
-    discarded_str = ", ".join(discarded) if discarded else "None"
-    
-    formatted_system_prompt = SYSTEM_PROMPT.format(
-        max_tools=MAX_TOOLS_PER_STEP,
-        tools_schema=tools_str,
-        discarded_tools=discarded_str
+    # Si se alcanza el límite de reintentos, abortamos la evaluación de tools
+    if current_retries >= MAX_TOOLS_PER_STEP:
+        return {
+            "is_approved": False,
+            "reasoning": f"Reached maximum retry threshold ({MAX_TOOLS_PER_STEP}). Stopping tool evaluation loop.",
+            "retry_count": current_retries
+        }
+
+    if not selected_tools:
+        return {
+            "is_approved": False,
+            "reasoning": "No tools were provided for review.",
+            "retry_count": current_retries
+        }
+        
+    tools_summary = "\n".join(
+        [f"- Tool: {t.get('name', '')} | Args: {t.get('args', {})}" for t in selected_tools]
     )
     
+    user_content = f"User Input: {user_input}\n\nProposed Tool Sequence:\n{tools_summary}"
+    
     messages = [
-        SystemMessage(content=formatted_system_prompt),
-        HumanMessage(content=user_input)
+        SystemMessage(content=SYSTEM_PROMPT),
+        HumanMessage(content=user_content)
     ]
     
-    response = cast(ToolSelectionOutput, await structured_llm.ainvoke(messages))
+    response = cast(ReviewerOutput, await structured_llm.ainvoke(messages))
     
-    selected_tools_payload = [
-        {"name": tool.tool_name, "args": tool.tool_args}
-        for tool in response.tools[:MAX_TOOLS_PER_STEP]
-        if tool.tool_name
-    ]
+    current_discarded = list(state.get("discarded_tools", []))
+    new_retry_count = current_retries
+
+    if not response.approved:
+        new_retry_count += 1
+        if response.discard_tools:
+            for tool_name in response.discard_tools:
+                if tool_name not in current_discarded:
+                    current_discarded.append(tool_name)
 
     return {
-        "selected_tools": selected_tools_payload
+        "is_approved": response.approved,
+        "discarded_tools": current_discarded,
+        "retry_count": new_retry_count
     }
