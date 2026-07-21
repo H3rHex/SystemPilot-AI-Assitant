@@ -17,3 +17,4 @@ class AgentState(TypedDict):
     final_response:str # Final response text
 
     tool_retry_count:int # Prevent the model from entering a loop by choosing the right tool
+    draft_retry_count:int # Prevent the model from entering a loop by making a good response
