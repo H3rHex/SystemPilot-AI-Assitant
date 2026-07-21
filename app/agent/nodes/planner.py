@@ -26,7 +26,7 @@ Your sole task is to decide whether the user's input can be answered directly us
 - Set `needs_tool` to True if the request involves executing system commands, reading local environment state, performing mathematical calculations, or any task requiring precise tool assistance.
 - Set `needs_tool` to False ONLY if the request can be completely and accurately answered through standard reasoning, general knowledge, or casual conversation."""
 
-def planner_mode(state: AgentState) -> dict:
+def planner_node(state: AgentState) -> dict:
     """Planner Node: Evaluates user input and decides whether tools are required."""
     user_input = state["input"]
 
