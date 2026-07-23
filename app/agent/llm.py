@@ -11,9 +11,9 @@ def get_llm(temperature:float = 0.0)-> ChatOpenAI:
     # raw_api_key = str(LLM_API_KEY) if LLM_API_KEY else "ollama"
     # api_key = SecretStr(raw_api_key)
 
-    model_name = "google/gemma-4-26b-a4b-it:free"
-    base_url = "https://openrouter.ai/api/v1"
-    raw_api_key = "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"
+    model_name = "llama3.2:latest"
+    base_url = "http://localhost:11434/v1"
+    raw_api_key = "ollama"
     api_key = SecretStr(raw_api_key)
 
 

@@ -19,12 +19,19 @@ class PlannerOutput(BaseModel):
 llm = get_llm(0.0)
 structured_llm = llm.with_structured_output(PlannerOutput)
 
-SYSTEM_PROMPT = """You are the intent classifier for SystemPilot.
+SYSTEM_PROMPT = """Classify if the request needs system tools/local access.
 
-Your sole task is to decide whether the user's input can be answered directly using general knowledge and conversation, or if it requires invoking an external tool.
+needs_tool = False: greetings, general knowledge.
+needs_tool = True: local files, system status, IP, RAM, CPU, disk, commands.
 
-- Set `needs_tool` to True if the request involves executing system commands, reading local environment state, performing mathematical calculations, or any task requiring precise tool assistance.
-- Set `needs_tool` to False ONLY if the request can be completely and accurately answered through standard reasoning, general knowledge, or casual conversation."""
+If unsure -> needs_tool = True.
+
+Examples:
+"Hola" -> False
+"What is Linux?" -> False
+"Check my disk space" -> True
+"List files" -> True
+"What is my IP?" -> True"""
 
 def planner_node(state: AgentState) -> dict:
     """Planner Node: Evaluates user input and decides whether tools are required."""

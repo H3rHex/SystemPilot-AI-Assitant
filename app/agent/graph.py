@@ -1,44 +1,40 @@
-from typing import Literal
-from langgraph.graph import StateGraph, START, END
-
+# app/agent/graph.py
+from langgraph.graph import StateGraph, END
 from app.agent.state import AgentState
-from app.agent.config import MAX_TOOLS_PER_STEP, MAX_DRAFT_PER_STEP
-
 from app.agent.nodes.planner import planner_node
 from app.agent.nodes.tool_getter import tool_getter_node
-from app.agent.nodes.tool_reviewer import tool_reviewer_node
-from app.agent.nodes.drafter import drafter_node
-from app.agent.nodes.reviewer import reviewer_node
+from app.agent.nodes.tool_runner import tool_runner_node
+from app.agent.nodes.response_writer import response_writer_node
 
-from app.agent.edges import (
+def route_planner(state: AgentState) -> str:
+    if state.get("needs_tool", False):
+        return "tool_getter"
+    return "response_writer"
+
+workflow = StateGraph(AgentState)
+
+# Add Nodes
+workflow.add_node("planner", planner_node)
+workflow.add_node("tool_getter", tool_getter_node)
+workflow.add_node("tool_runner", tool_runner_node)
+workflow.add_node("response_writer", response_writer_node)
+
+# Set Entry Point
+workflow.set_entry_point("planner")
+
+# Add Edges
+workflow.add_conditional_edges(
+    "planner",
     route_planner,
-    route_tool_reviewer,
-    route_final_reviewer,
+    {
+        "tool_getter": "tool_getter",
+        "response_writer": "response_writer"
+    }
 )
 
-def create_agent_graph():
-    builder = StateGraph(AgentState)
+workflow.add_edge("tool_getter", "tool_runner")
+workflow.add_edge("tool_runner", "response_writer")
+workflow.add_edge("response_writer", END)
 
-    # 1. Registrar Nodos
-    builder.add_node("planner", planner_node)
-    builder.add_node("tool_getter", tool_getter_node)
-    builder.add_node("tool_reviewer", tool_reviewer_node)
-    builder.add_node("drafter", drafter_node)
-    builder.add_node("reviewer", reviewer_node)
-
-    # 2. Conectar Flujo
-    builder.add_edge(START, "planner")
-    
-    # Transiciones condicionales
-    builder.add_conditional_edges("planner", route_planner)
-    
-    builder.add_edge("tool_getter", "tool_reviewer")
-    builder.add_conditional_edges("tool_reviewer", route_tool_reviewer)
-    
-    builder.add_edge("drafter", "reviewer")
-    builder.add_conditional_edges("reviewer", route_final_reviewer)
-
-    return builder.compile()
-
-# Instancia ejecutable del grafo
-agent_graph = create_agent_graph()
+# Compile Graph
+app_graph = workflow.compile()
