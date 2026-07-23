@@ -65,19 +65,35 @@ class CommandLineInterface:
         self.console.print('\n' + '-' * 50)
     
     def print_stream(self, stream_generator) -> str:
-        """Render an incoming stream of tokens as live Markdown."""
-        # Imprime el prefijo del asistente (ajusta el texto a tu gusto)
-        self.console.print("\n[bold cyan]🤖 SystemPilot:[/bold cyan]")
+        """Render status messages with Rich markup and model output as live Markdown."""
+        self.console.print("\n[bold cyan]SystemPilot:[/bold cyan]")
         
-        full_text = ""
-        with Live(console=self.console, refresh_per_second=12, auto_refresh=False) as live:
-            for token in stream_generator:
-                full_text += token
-                live.update(Markdown(full_text), refresh=True)
+        full_response = ""
+        
+        # 1. First, process and render status messages directly to console
+        # (they are short strings that end with a newline)
+        for chunk in stream_generator:
+            if chunk.startswith("[dim]"):
+                self.console.print(chunk, end="")
+            else:
+                # Once status messages finish and LLM tokens start, collect the first chunk
+                full_response += chunk
+                break
+
+        # 2. Render only the model's actual response inside Live(Markdown)
+        if full_response:
+            with Live(console=self.console, refresh_per_second=12, auto_refresh=False) as live:
+                # Render the first captured token
+                live.update(Markdown(full_response), refresh=True)
                 
-        self.console.print() # Salto de línea final tras terminar el stream
-        return full_text
-    
+                # Continue streaming the rest of the Markdown response
+                for chunk in stream_generator:
+                    full_response += chunk
+                    live.update(Markdown(full_response), refresh=True)
+                        
+        self.console.print()
+        return full_response
+        
 
         
     

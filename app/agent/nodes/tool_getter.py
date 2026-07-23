@@ -42,8 +42,8 @@ def sanitize_args(proposed_args: dict[str, Any], schema: dict[str, Any]) -> dict
     sanitized = {k: v for k, v in proposed_args.items() if k in allowed_keys}
     
     removed_keys = set(proposed_args.keys()) - allowed_keys
-    if removed_keys:
-        print(f"⚠️ [SANITIZER] Removed disallowed arguments: {removed_keys}")
+    # if removed_keys:
+    #     print(f"⚠️ [SANITIZER] Removed disallowed arguments: {removed_keys}")
         
     return sanitized
 
@@ -79,7 +79,7 @@ async def tool_getter_node(state: AgentState) -> dict:
             clean_args = sanitize_args(tool.tool_args, tool_schemas[tool.tool_name])
             selected_tools_payload.append({"name": tool.tool_name, "args": clean_args})
 
-    print(f"[DEBUG Tool Getter] Selected and validated tools: {selected_tools_payload}\n")
+    # print(f"[DEBUG Tool Getter] Selected and validated tools: {selected_tools_payload}\n")
 
     return {
         "selected_tools": selected_tools_payload
