@@ -1,23 +1,26 @@
-import asyncio
 from typing import Any
 from app.mcp.client import MCPClientManager
 
-class MCPAdapter:
-    """Synchronous adapter bridging AgentEngine with the async MCPClientManager."""
+_mcp_client = MCPClientManager()
+
+async def get_mcp_tools() -> list[dict[str, Any]]:
+    """Retrieves tools from FastMCP client and simplifies their schema for the LLM."""
+    formatted_tools = await _mcp_client.get_tools_for_llm()
     
-    def __init__(self) -> None:
-        self.client = MCPClientManager()
+    tools_catalog: list[dict[str, Any]] = []
+    for item in formatted_tools:
+        fn = item.get("function", {})
+        tools_catalog.append({
+            "name": fn.get("name", ""),
+            "description": fn.get("description", ""),
+            "inputSchema": fn.get("parameters", {})
+        })
+        
+    return tools_catalog
 
-    def get_tools(self) -> list[dict[str, Any]]:
-        """Fetch tools available on the MCP server."""
-        try:
-            return asyncio.run(self.client.get_tools_for_llm())
-        except Exception:
-            return []
-
-    def execute_tool(self, name: str, arguments: dict[str, Any]) -> str:
-        """Execute a tool synchronously on the MCP server."""
-        try:
-            return asyncio.run(self.client.execute_tool(name, arguments))
-        except Exception as e:
-            return f"Error executing tool '{name}': {str(e)}"
+async def execute_mcp_tool(tool_name: str, tool_args: dict[str, Any] | None = None) -> str:
+    """Executes a tool on the FastMCP server asynchronously."""
+    try:
+        return await _mcp_client.execute_tool(tool_name, tool_args or {})
+    except Exception as e:
+        return f"Error executing tool '{tool_name}': {str(e)}"
