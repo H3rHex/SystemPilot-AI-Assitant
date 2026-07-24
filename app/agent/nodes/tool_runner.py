@@ -1,7 +1,9 @@
 # app/agent/nodes/tool_runner.py
+from app.agent.observability import observe
 from app.agent.state import AgentState
 from app.agent.mcp_adapter import  execute_mcp_tool
 
+@observe(name="tool_runner_node", as_type="tool")
 async def tool_runner_node(state: AgentState) -> dict:
     selected_tools = state.get("selected_tools", [])
     tool_results = []

@@ -3,6 +3,7 @@ import asyncio
 import warnings
 from typing import Generator
 from app.agent.graph import app_graph
+from app.agent.observability import observe
 from app.agent.state import AgentState
 
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
@@ -10,6 +11,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 class AgentEngine:
     """High-level orchestrator for SystemPilot using LangGraph with clean token streaming."""
 
+    @observe(name="systempilot.get_response", as_type="agent")
     def get_response(self, prompt: str) -> Generator[str, None, None]:
         """Orchestrates graph execution, yielding clean status updates and live final text tokens."""
         initial_state: AgentState = {

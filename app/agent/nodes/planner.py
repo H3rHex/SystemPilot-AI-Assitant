@@ -4,6 +4,7 @@ from typing import cast
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
+from app.agent.observability import observe
 from app.agent.state import AgentState
 from app.agent.llm import get_llm
 
@@ -39,6 +40,7 @@ needs_tool = False:
 If unsure -> needs_tool = True.
 """
 
+@observe(name="planner_node", as_type="chain")
 def planner_node(state: AgentState) -> dict:
     """Planner Node: Evaluates user input and decides whether tools are required."""
     user_input = state["input"]

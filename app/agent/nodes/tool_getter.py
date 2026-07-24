@@ -2,6 +2,7 @@
 from typing import Any, cast
 from pydantic import BaseModel, Field
 from langchain_core.messages import SystemMessage, HumanMessage
+from app.agent.observability import observe
 from app.agent.state import AgentState
 from app.agent.llm import get_llm
 from app.agent.mcp_adapter import get_mcp_tools
@@ -47,6 +48,7 @@ def sanitize_args(proposed_args: dict[str, Any], schema: dict[str, Any]) -> dict
         
     return sanitized
 
+@observe(name="tool_getter_node", as_type="chain")
 async def tool_getter_node(state: AgentState) -> dict:
     user_input = state["input"]
     discarded = state.get("discarded_tools", [])
