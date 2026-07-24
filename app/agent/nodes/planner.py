@@ -8,30 +8,36 @@ from app.agent.state import AgentState
 from app.agent.llm import get_llm
 
 class PlannerOutput(BaseModel):
-    needs_tool:bool = Field(
-        description="True if the request requires inspecting, executing, or checking the OS/local system state. False for general conversation or theoretical questions."
+    needs_tool: bool = Field(
+        description=(
+            "True if the request requires system status (OS, RAM, CPU, Disk, IP), "
+            "executing shell commands, file system actions, or solving math/calculations. "
+            "False ONLY for general chat, text explanations, or theoretical answers."
+        )
     )
 
-    reasoning:str = Field(
-        description="Short reasoning explaining why a tool is needed or not."
+    reasoning: str = Field(
+        description="One short sentence in English explaining why a tool is or isn't required."
     )
 
 llm = get_llm(0.0)
 structured_llm = llm.with_structured_output(PlannerOutput)
 
-SYSTEM_PROMPT = """Classify if the request needs system tools/local access.
+SYSTEM_PROMPT = """Analyze if the user request requires executing a tool, inspecting local system state, or performing calculations.
 
-needs_tool = False: greetings, general knowledge.
-needs_tool = True: local files, system status, IP, RAM, CPU, disk, commands.
+CRITICAL RULE:
+Any question asking about "my system", "my OS", "my computer", "my PC", or current hardware status refers to LOCAL HARDWARE DATA and MUST use a tool.
+
+needs_tool = True:
+- Queries asking about "my OS", "my system", OS name/version, RAM, CPU, disk, IP, hostname, processes, or local files.
+- Command Execution: Requests to run, create, write, modify, or delete anything on the local machine.
+- Math & Calculations: Any math problem or arithmetic (do NOT calculate manually).
+
+needs_tool = False:
+- General theory, definitions (e.g., "What is Linux?"), code writing without execution, or conversational chat.
 
 If unsure -> needs_tool = True.
-
-Examples:
-"Hola" -> False
-"What is Linux?" -> False
-"Check my disk space" -> True
-"List files" -> True
-"What is my IP?" -> True"""
+"""
 
 def planner_node(state: AgentState) -> dict:
     """Planner Node: Evaluates user input and decides whether tools are required."""
