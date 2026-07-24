@@ -49,7 +49,6 @@ def get_network_info() -> str:
     net_if_addrs = psutil.net_if_addrs()
 
     for interface_name, addrs in net_if_addrs.items():
-        # Omitimos interfaces virtuales comunes de Docker/loopback si no tienen IP útil
         if interface_name.startswith("lo") or interface_name.startswith("docker"):
             continue
 
@@ -62,7 +61,6 @@ def get_network_info() -> str:
         if ip_list:
             interfaces_data[interface_name] = ip_list
 
-    # Intento rápido de obtener el IP local predeterminado de la máquina
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))

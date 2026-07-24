@@ -1,110 +1,109 @@
 # SystemPilot
 
-Asistente de escritorio para terminal que conecta modelos de lenguaje con herramientas del sistema operativo. SystemPilot puede interpretar peticiones en lenguaje natural y ejecutar acciones locales mediante MCP (Model Context Protocol).
+Terminal desktop assistant that connects language models with operating system tools. SystemPilot can interpret natural-language requests and execute local actions through MCP (Model Context Protocol).
 
-[Español](README.md) | [English](README.en.md)
-
----
-
-## Descripción
-
-La versión actual es una alpha y funciona desde la línea de comandos. La arquitectura está preparada para incorporar una interfaz web en futuras versiones.
+[Español](README.es.md) | **English**
 
 ---
 
-## Tecnología principal
+## Description
 
-La alpha utiliza herramientas ligeras para ejecutar el asistente directamente en el equipo:
+The current version is an alpha release that runs from the command line. The architecture is prepared to support a web interface in future versions.
 
-- **Lenguaje:** Python 3.13+.
-- **Gestión de paquetes:** `uv`, con `pip` como alternativa.
-- **Orquestación:** FastMCP y LangGraph.
-- **IA local:** Ollama con modelos pequeños.
-- **IA cloud:** OpenRouter u OpenAI mediante una API compatible.
-- **Interfaz:** Rich y `prompt-toolkit` para la terminal.
+## Main technology
 
-## Modelos locales recomendados
-* **Llama 3.2 (3B)**
-* **Qwen 2.5 (3B)**
-* **Llama 3.1 (8B)**
-* **Qwen 2.5 (7B)**
-* **Gemma 3 (4B)**
+The alpha uses lightweight tools so the assistant can run directly on the host machine:
 
-### TESTED ON HP ProBook 450 G5**
--  **CPU:** Intel® Core™ i5-8250U × 8
--  **GPU:** Intel® UHD Graphics 620 (KBL GT2)
--  **RAM:** 32 GB
-- **SO:** Ubuntu 24.04.4 LTS
----
+- **Language:** Python 3.13+.
+- **Package management:** `uv`, with `pip` as an alternative.
+- **Orchestration:** FastMCP and LangGraph.
+- **Local AI:** Ollama with small models.
+- **Cloud AI:** OpenRouter or OpenAI through a compatible API.
+- **Interface:** Rich and `prompt-toolkit` for the terminal.
 
-## Requisitos
+## Recommended local models
 
-- Python 3.13 o superior.
+- Llama 3.2 (3B)
+- Qwen 2.5 (3B)
+- Llama 3.1 (8B)
+- Qwen 2.5 (7B)
+- Gemma 3 (4B)
+
+### Tested on an HP ProBook 450 G5
+
+- **CPU:** Intel Core i5-8250U x 8
+- **GPU:** Intel UHD Graphics 620 (KBL GT2)
+- **RAM:** 32 GB
+- **Operating system:** Ubuntu 24.04.4 LTS
+
+## Requirements
+
+- Python 3.13 or later.
 - Git.
-- `uv`, recomendado para crear el entorno e instalar las dependencias. También se puede utilizar `pip`.
-- Un proveedor de modelos: Ollama para ejecutar la IA localmente, u OpenAI/OpenRouter para usar un modelo en la nube. Los proveedores cloud requieren una cuenta y una API key.
+- `uv`, recommended for creating the environment and installing dependencies. `pip` can also be used.
+- An AI provider: Ollama to run AI locally, or OpenAI/OpenRouter to use a cloud model. Cloud providers require an account and an API key.
 
-## Instalación
+## Installation
 
-### 1. Descargar el proyecto
+### 1. Download the project
 
 ```bash
-git clone https://github.com/<usuario>/SystemPilot.git
+git clone https://github.com/<username>/SystemPilot.git
 cd SystemPilot
 ```
 
-Sustituye `<usuario>` por el propietario real del repositorio si la URL cambia.
+Replace `<username>` with the actual repository owner if the URL changes.
 
-### 2. Instalar Python
+### 2. Install Python
 
-Comprueba primero la versión disponible:
+First check the available version:
 
 ```bash
 python --version
 ```
 
-Debe ser `3.13` o superior. Si no está instalado:
+It must be `3.13` or later. If Python is not installed:
 
-- **Linux (Ubuntu/Debian):** instala Python 3.13 desde los repositorios de tu distribución o desde [python.org](https://www.python.org/downloads/). En versiones recientes de Ubuntu: `sudo apt update && sudo apt install python3.13 python3.13-venv git`.
-- **macOS:** instala Python desde [python.org](https://www.python.org/downloads/macos/) o con Homebrew: `brew install python@3.13`.
-- **Windows:** descarga el instalador desde [python.org](https://www.python.org/downloads/windows/) y marca **Add Python to PATH** durante la instalación.
+- **Linux (Ubuntu/Debian):** install Python 3.13 from your distribution repositories or from [python.org](https://www.python.org/downloads/). On recent Ubuntu versions: `sudo apt update && sudo apt install python3.13 python3.13-venv git`.
+- **macOS:** install Python from [python.org](https://www.python.org/downloads/macos/) or with Homebrew: `brew install python@3.13`.
+- **Windows:** download the installer from [python.org](https://www.python.org/downloads/windows/) and select **Add Python to PATH** during installation.
 
-En algunos sistemas el ejecutable se llama `python3` en lugar de `python`. Usa ese nombre en los comandos siguientes cuando sea necesario.
+On some systems the executable is called `python3` instead of `python`. Use that name in the following commands when necessary.
 
-### 3. Instalar `uv` (recomendado)
+### 3. Install `uv` (recommended)
 
-`uv` crea el entorno virtual y resuelve las dependencias de forma rápida:
+`uv` creates the virtual environment and resolves dependencies quickly:
 
-- **Linux y macOS:**
+- **Linux and macOS:**
 
-	```bash
-	curl -LsSf https://astral.sh/uv/install.sh | sh
-	```
+  ```bash
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  ```
 
 - **Windows PowerShell:**
 
-	```powershell
-	powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-	```
+  ```powershell
+  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+  ```
 
-Reinicia la terminal si el comando `uv` todavía no aparece en el `PATH`. Después, desde la carpeta del proyecto:
+Restart the terminal if the `uv` command is not available in your `PATH`. Then, from the project directory:
 
 ```bash
 uv sync
 ```
 
-`uv sync` crea `.venv` e instala las dependencias definidas en `pyproject.toml` y `uv.lock`.
+`uv sync` creates `.venv` and installs the dependencies defined in `pyproject.toml` and `uv.lock`.
 
-#### Alternativa con `pip`
+#### Alternative using `pip`
 
-Si prefieres no instalar `uv`, crea y activa un entorno virtual con Python e instala el proyecto:
+If you prefer not to install `uv`, create and activate a virtual environment with Python and install the project:
 
 ```bash
 python -m venv .venv
 ```
 
 ```bash
-# Linux y macOS
+# Linux and macOS
 source .venv/bin/activate
 pip install -e .
 ```
@@ -115,57 +114,57 @@ pip install -e .
 pip install -e .
 ```
 
-## Configurar el proveedor de IA
+## Configure the AI provider
 
-Copia la plantilla de configuración y edítala:
+Copy the configuration template and edit it:
 
 ```bash
 cp .env.example .env
 ```
 
-En Windows PowerShell, el equivalente es:
+In Windows PowerShell, use:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-No compartas nunca el archivo `.env` ni una API key en capturas, commits o mensajes públicos.
+Never share the `.env` file or an API key in screenshots, commits, or public messages.
 
-### Opción A: Ollama (IA local)
+### Option A: Ollama (local AI)
 
-Ollama permite ejecutar los modelos en tu propio equipo. Es la opción recomendada si quieres evitar costes de API o mantener las peticiones localmente.
+Ollama runs models on your own computer. It is the recommended option if you want to avoid API costs or keep requests local.
 
-Instalación:
+Installation:
 
 - **Linux:**
 
-	```bash
-	curl -fsSL https://ollama.com/install.sh | sh
-	```
+  ```bash
+  curl -fsSL https://ollama.com/install.sh | sh
+  ```
 
-- **macOS:** descarga e instala Ollama desde [ollama.com/download/mac](https://ollama.com/download/mac).
-- **Windows:** descarga e instala Ollama desde [ollama.com/download/windows](https://ollama.com/download/windows).
+- **macOS:** download and install Ollama from [ollama.com/download/mac](https://ollama.com/download/mac).
+- **Windows:** download and install Ollama from [ollama.com/download/windows](https://ollama.com/download/windows).
 
-Descarga un modelo sencillo, por ejemplo:
+Download a small model, for example:
 
 ```bash
 ollama pull llama3.2:latest
 ```
 
-También puedes probar otros modelos pequeños:
+You can also try other small models:
 
 ```bash
 ollama pull qwen2.5:3b
 ollama pull gemma3:4b
 ```
 
-Comprueba que Ollama responde con una prueba rápida:
+Check that Ollama responds with a quick test:
 
 ```bash
 ollama run llama3.2:latest
 ```
 
-Si el servicio no se inicia automáticamente, ejecútalo en otra terminal con `ollama serve`. En `.env`, utiliza el perfil local:
+If the service does not start automatically, run it in another terminal with `ollama serve`. In `.env`, use the local profile:
 
 ```dotenv
 LLM_BASE_URL=http://localhost:11434/v1
@@ -173,74 +172,74 @@ LLM_API_KEY=ollama
 LLM_MODEL_NAME=llama3.2:latest
 ```
 
-### Opción B: OpenRouter
+### Option B: OpenRouter
 
-1. Crea una cuenta en [openrouter.ai](https://openrouter.ai/).
-2. Genera una API key desde el panel de claves.
-3. Elige un modelo disponible y copia su identificador.
-4. Configura `.env`:
+1. Create an account at [openrouter.ai](https://openrouter.ai/).
+2. Generate an API key from the keys panel.
+3. Choose an available model and copy its identifier.
+4. Configure `.env`:
 
 ```dotenv
 LLM_BASE_URL=https://openrouter.ai/api/v1
-LLM_API_KEY=tu_api_key_de_openrouter
-LLM_MODEL_NAME=nombre-del-modelo
+LLM_API_KEY=your_openrouter_api_key
+LLM_MODEL_NAME=model-name
 ```
 
-OpenRouter ofrece modelos gratuitos y de pago; revisa siempre los límites y el precio del modelo que selecciones.
+OpenRouter provides free and paid models. Always check the limits and price of the model you choose.
 
-### Opción C: OpenAI
+### Option C: OpenAI
 
-1. Crea una cuenta en [platform.openai.com](https://platform.openai.com/).
-2. Añade un método de pago si el modelo lo requiere.
-3. Genera una API key y elige un modelo al que tengas acceso.
-4. Configura `.env`:
+1. Create an account at [platform.openai.com](https://platform.openai.com/).
+2. Add a payment method if the model requires it.
+3. Generate an API key and choose a model you can access.
+4. Configure `.env`:
 
 ```dotenv
 LLM_BASE_URL=https://api.openai.com/v1
-LLM_API_KEY=tu_api_key_de_openai
+LLM_API_KEY=your_openai_api_key
 LLM_MODEL_NAME=gpt-4.1-mini
 ```
 
-> **Estado de la alpha:** la plantilla `.env.example` incluye perfiles para Ollama, OpenRouter y OpenAI. Sin embargo, la implementación actual del adaptador LLM utiliza por defecto `llama3.2:latest` en Ollama. El soporte para cambiar de proveedor mediante estas variables está preparado en la configuración, pero puede requerir completar esa integración antes de usar proveedores cloud.
+> **Alpha status:** `.env.example` includes profiles for Ollama, OpenRouter, and OpenAI. However, the current LLM adapter implementation uses `llama3.2:latest` through Ollama by default. Support for switching providers through these variables is prepared in the configuration, but completing that integration may still be required before using cloud providers.
 
-## Uso
+## Usage
 
-Con Ollama, asegúrate de que el servicio está activo y ejecuta:
+With Ollama, make sure the service is running and execute:
 
 ```bash
 uv run python -m app.main
 ```
 
-Si utilizas `pip`, activa primero `.venv` y ejecuta:
+If you use `pip`, activate `.venv` first and run:
 
 ```bash
 python -m app.main
 ```
 
-Comandos disponibles durante la sesión:
+Available commands during the session:
 
-- `/clear` limpia la pantalla.
-- `/exit` o `/quit` cierra SystemPilot.
+- `/clear` clears the screen.
+- `/exit` or `/quit` closes SystemPilot.
 
-## Recomendaciones y limitaciones
+## Recommendations and limitations
 
-SystemPilot utiliza principalmente modelos pequeños, especialmente en la configuración local. Estos modelos pueden interpretar mal una petición, inventar información, elegir una herramienta incorrecta o ejecutar una acción distinta de la esperada.
+SystemPilot primarily uses small models, especially with the local configuration. These models may misunderstand a request, make up information, choose the wrong tool, or perform an action different from the one expected.
 
-Para obtener mejores resultados:
+For better results:
 
-- Formula preguntas sencillas, concretas y bien redactadas.
-- Divide una tarea compleja en varios pasos y comprueba cada respuesta.
-- Indica claramente qué sistema, archivo o acción quieres utilizar.
-- Revisa siempre las operaciones que puedan modificar archivos, procesos o la configuración del equipo.
-- No concedas permisos elevados salvo que entiendas exactamente qué va a hacer la operación.
+- Ask simple, specific, and well-worded questions.
+- Break complex tasks into several steps and check each response.
+- Clearly state which system, file, or action you want to use.
+- Always review operations that may modify files, processes, or system configuration.
+- Do not grant elevated permissions unless you understand exactly what the operation will do.
 
-La respuesta puede tardar más cuanto más compleja sea la pregunta. Con IA local, el tiempo depende además del procesador, la memoria, la GPU disponible, el tamaño del modelo y la cantidad de contexto que deba procesarse. Un modelo más grande no siempre será mejor en un equipo modesto: puede responder con mayor lentitud y consumir más recursos.
+Responses may take longer depending on the complexity of the question. With local AI, response time also depends on the processor, memory, available GPU, model size, and the amount of context that must be processed. A larger model is not always better on modest hardware: it may respond more slowly and consume more resources.
 
-## Tecnología
+## Technology
 
 - **Python 3.13+**
-- **uv** o `pip` para la gestión del entorno
-- **FastMCP** para exponer herramientas locales mediante MCP
-- **Ollama**, OpenRouter u OpenAI como proveedores de modelos
-- **LangGraph** para la orquestación del agente
-- **Rich** y `prompt-toolkit` para la interfaz de terminal
+- **uv** or `pip` for environment management
+- **FastMCP** for exposing local tools through MCP
+- **Ollama**, OpenRouter, or OpenAI as model providers
+- **LangGraph** for agent orchestration
+- **Rich** and `prompt-toolkit` for the terminal interface
