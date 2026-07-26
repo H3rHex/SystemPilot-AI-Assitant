@@ -27,6 +27,7 @@ structured_llm = llm.with_structured_output(PlannerOutput)
 SYSTEM_PROMPT = """Analyze the user request and decide if executing a tool or interacting with the system/environment is required.
 
 Set needs_tool = True IF:
+- The request asks about system capabilities, available tools, or help (e.g., "What can you do?", "What tools do you have?", "Help").
 - The request requires reading, writing, searching, modifying, or deleting local files, system resources, or state.
 - The request asks to execute system commands, code, scripts, or external API calls.
 - The request involves checking hardware, system status, processes, or dynamic local data.
@@ -34,7 +35,7 @@ Set needs_tool = True IF:
 Set needs_tool = False STRICTLY ONLY IF:
 - Pure conceptual explanations, theories, or general knowledge (e.g., "What is Linux?", "Explain Python").
 - Generating code snippets in text without requesting to run or save them to disk.
-- Casual greetings or general conversational chat.
+- Casual greetings (e.g., "Hello", "How are you?") without asking about capabilities.
 
 WHEN IN DOUBT -> ALWAYS SET needs_tool = True.
 """

@@ -1,11 +1,13 @@
 from typing import Callable
 from app.mcp.server_instance import mcp
 
+import app.mcp.tools.get_system_capabilities as _app_
 import app.mcp.tools.system_info as system_tools
 import app.mcp.tools.file_tools as file_tools
 
 
 TOOL_MODULES = [
+    _app_.get_system_capabilities,
     system_tools.get_cpu_info,system_tools.get_network_info,system_tools.get_system_info,
     file_tools.create_file
 ]
