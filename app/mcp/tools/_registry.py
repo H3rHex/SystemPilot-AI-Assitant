@@ -9,7 +9,7 @@ import app.mcp.tools.file_tools as file_tools
 TOOL_MODULES = [
     _app_.get_system_capabilities,
     system_tools.get_cpu_info,system_tools.get_network_info,system_tools.get_system_info,
-    file_tools.create_file
+    file_tools.create_file, file_tools.delete_file, file_tools.find_files, file_tools.get_default_downloads_dir
 ]
 
 def load_tools() -> None:

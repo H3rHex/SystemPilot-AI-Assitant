@@ -230,3 +230,58 @@ def delete_file(
             "status": "error",
             "message": f"Failed to delete file: {str(e)}"
         }, indent=2)
+
+@mcp.tool()
+def list_directory(
+    path: str = Field(
+        "default",
+        description=(
+            "Absolute or relative directory path to inspect (e.g., '/home/user/documents'). "
+            "Pass 'default' or 'home' for user's home directory. "
+        )
+    )
+) -> str:
+    """List the contents of a specific directory (files and subdirectories).
+    Returns a JSON structure with item names, types (file vs directory), and file sizes.
+
+    LLM INSTRUCTIONS:
+    - Use this tool when the user asks to see what is inside a folder, list directory contents, or inspect a path.
+    """
+    try:
+        dir_lower = path.strip().lower()
+
+        if dir_lower in ("default", "home", ""):
+            base_dir = Path.home()
+        else:
+            base_dir = Path(path).resolve()
+
+        if not base_dir.exists() or not base_dir.is_dir():
+            return json.dumps({
+                "status": "error",
+                "message": f"Directory '{base_dir}' does not exist or is not a valid directory."
+            }, indent=2)
+
+        path_content = []
+
+        for item in base_dir.iterdir():
+            is_directory = item.is_dir()
+
+            item_data = {
+                "name": item.name,
+                "type": "directory" if is_directory else "file"
+            }
+
+            path_content.append(item_data)
+
+        return json.dumps({
+            "status": "success",
+            "target_directory": str(base_dir),
+            "total_items": len(path_content),
+            "items": path_content
+        }, indent=2)
+
+    except Exception as e:
+        return json.dumps({
+            "status": "error",
+            "message": f"Failed to list directory: {str(e)}"
+        }, indent=2)
