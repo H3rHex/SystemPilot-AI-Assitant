@@ -29,6 +29,10 @@ MANDATORY DIRECTIVES:
 1. LOCAL SYSTEM POLICY: Any query asking about "my system", "my OS", "my computer", "my PC", hardware, processes, or local files refers to LOCAL DATA and MUST use a tool.
 2. ACTION POLICY: Any request to run, write, modify, or execute commands on the machine MUST use a tool.
 
+FILE OPERATIONS RULE:
+- When asked to create, write, or save a file, use 'create_file'.
+- Ensure 'file_path' is a valid string path.
+
 CLASSIFICATION RULES:
 
 Set needs_tool = True IF:
