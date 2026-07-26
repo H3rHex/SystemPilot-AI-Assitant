@@ -1,5 +1,6 @@
 import os
 import json
+import fnmatch
 from pathlib import Path
 from pydantic import Field
 from app.mcp.server_instance import mcp
@@ -20,7 +21,91 @@ def get_default_downloads_dir() -> Path:
     downloads_en.mkdir(parents=True, exist_ok=True)
     return downloads_en
 
+@mcp.tool()
+def find_files(
+    pattern: str = Field(
+        ...,
+        description=(
+            "The filename or pattern to search for. Supports wildcards (*, ?). "
+            "Examples: 'report.pdf', '*.log', 'python*'."
+        )
+    ),
+    search_directory: str = Field(
+        "default",
+        description=(
+            "Target directory to start recursive search. "
+            "Pass 'default' or 'home' to search the entire user home directory (/home/username or C:\\Users\\username). "
+            "Pass 'downloads' to search only in Downloads. "
+            "Or pass an explicit path like '/var/log'."
+        )
+    ),
+    max_results: int = Field(
+        10,
+        description="Maximum number of matched files to return."
+    )
+) -> str:
+    """Find files matching a pattern recursively.
+    By default, searches across the entire user home directory (/home/user or C:\\Users\\user).
+    """
+    try:
+        dir_lower = search_directory.strip().lower()
 
+        if dir_lower in ("default", "home", ""):
+            base_dir = Path.home()  # Resolve /home/h3rhex on Linux o C:\Users\h3rhex on Windows
+        elif dir_lower == "downloads":
+            base_dir = get_default_downloads_dir()
+        else:
+            base_dir = Path(search_directory).resolve()
+
+        if not base_dir.exists() or not base_dir.is_dir():
+            return json.dumps({
+                "status": "error",
+                "message": f"Directory '{base_dir}' does not exist or is not a valid directory."
+            }, indent=2)
+
+        matches = []
+
+        for root, dirs, files in os.walk(base_dir):
+            
+            dirs[:] = [
+                d for d in dirs 
+                if not d.startswith('.') and d not in ('node_modules', '__pycache__', 'venv', '.venv')
+            ]
+
+            for filename in files:
+                if fnmatch.fnmatch(filename.lower(), pattern.lower()):
+                    full_path = Path(root) / filename
+                    
+                    try:
+                        size_bytes = full_path.stat().st_size
+                    except Exception:
+                        size_bytes = -1
+
+                    matches.append({
+                        "filename": filename,
+                        "path": str(full_path),
+                        "size_bytes": size_bytes
+                    })
+
+                    if len(matches) >= max_results:
+                        break
+
+            if len(matches) >= max_results:
+                break
+
+        return json.dumps({
+            "status": "success",
+            "matches_found": len(matches),
+            "search_directory": str(base_dir),
+            "results": matches
+        }, indent=2)
+
+    except Exception as e:
+        return json.dumps({
+            "status": "error",
+            "message": f"Failed to search files: {str(e)}"
+        }, indent=2)
+    
 @mcp.tool()
 def create_file(
     filename: str = Field(

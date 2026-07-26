@@ -1,6 +1,6 @@
 # app/agent/nodes/tool_getter.py
 from typing import cast
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage
 from app.agent.observability import observe
 from app.agent.state import AgentState
 from app.agent.llm import get_llm
@@ -9,33 +9,40 @@ from app.agent.mcp_adapter import get_mcp_tools
 llm = get_llm(temperature=0.0)
 
 SYSTEM_PROMPT = """You are the Tool Selection Module for SystemPilot.
-Select the necessary tool(s) to fulfill the user request based on the provided tool definitions.
-If no tool is required, do not invoke any tool."""
+
+Your job is to select the appropriate tool(s) and populate their arguments strictly matching their defined input schemas.
+
+GENERAL DIRECTIVES:
+1. ARGUMENT COMPLETENESS: If a tool requires content, text, or query generation (e.g., writing an essay, crafting a script, summarizing text), GENERATE the full required content inside the appropriate tool argument.
+2. CONTEXTUAL REUSE: If previous tool execution results are provided in the context, REUSE relevant data (such as absolute paths, IDs, or search hits) to populate the arguments for subsequent tool calls.
+3. SCHEMA STRICTNESS: Only pass arguments defined in the tool's input schema. Do not invent extra parameters.
+"""
 
 @observe(name="tool_getter_node", as_type="chain")
 async def tool_getter_node(state: AgentState) -> dict:
     user_input = state["input"]
     discarded = state.get("discarded_tools", [])
+    tool_results = state.get("tool_results", [])
     
     all_tools = await get_mcp_tools() 
     available_tools = [t for t in all_tools if t["name"] not in discarded]    
+    
     llm_with_tools = llm.bind_tools(available_tools)
     
-    messages = [
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=f"User Request: {user_input}")
-    ]
+    messages: list[BaseMessage] = [SystemMessage(content=SYSTEM_PROMPT)]    
+
+    if tool_results:
+        messages.append(HumanMessage(
+            content=f"Original Request: {user_input}\n\nPrevious Tool Results:\n{tool_results}"
+        ))
+    else:
+        messages.append(HumanMessage(content=f"User Request: {user_input}"))
     
     response = await llm_with_tools.ainvoke(messages)
     
-    selected_tools_payload = []
-    if response.tool_calls:
-        for tc in response.tool_calls:
-            selected_tools_payload.append({
-                "name": tc["name"],
-                "args": tc["args"]
-            })
+    selected_tools_payload = [
+        {"name": tc["name"], "args": tc["args"]} 
+        for tc in (response.tool_calls or [])
+    ]
 
-    return {
-        "selected_tools": selected_tools_payload
-    }
+    return {"selected_tools": selected_tools_payload}

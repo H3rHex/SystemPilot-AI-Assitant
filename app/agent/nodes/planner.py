@@ -24,23 +24,16 @@ class PlannerOutput(BaseModel):
 llm = get_llm(0.0)
 structured_llm = llm.with_structured_output(PlannerOutput)
 
-SYSTEM_PROMPT = """Analyze if the user request requires executing a tool, inspecting local system state, or performing file operations.
-
-MANDATORY DIRECTIVES:
-1. ACTION OVER CONTENT RULE (CRITICAL): If the user request contains action verbs related to files (e.g., "create", "write", "generate", "save", "make", "delete", "crea", "escribe", "guarda") targeting disk/files, it MUST be classified as needs_tool = True, REGARDLESS of the topic or content requested.
-2. LOCAL SYSTEM POLICY: Any query asking about "my system", "my OS", "my computer", "my PC", hardware, processes, or local files refers to LOCAL DATA and MUST use a tool.
-3. COMMAND EXECUTION: Any request to run commands, scripts, or modify system files MUST use a tool.
-
-CLASSIFICATION RULES:
+SYSTEM_PROMPT = """Analyze the user request and decide if executing a tool or interacting with the system/environment is required.
 
 Set needs_tool = True IF:
-- The user requests ANY file creation or modification, even if it involves generating text/code on a topic (e.g., "crea un archivo sobre Python", "write a note about history", "save a script").
-- The user asks about system status, OS, CPU, RAM, IP, processes, or local file lists.
-- The user requests running shell/terminal commands.
+- The request requires reading, writing, searching, modifying, or deleting local files, system resources, or state.
+- The request asks to execute system commands, code, scripts, or external API calls.
+- The request involves checking hardware, system status, processes, or dynamic local data.
 
 Set needs_tool = False STRICTLY ONLY IF:
-- Pure conceptual queries WITH NO FILE OR SYSTEM ACTION REQUESTED (e.g., "What is Linux?", "Explain Python", "How does TCP work?").
-- Writing code snippets in chat WITHOUT any request to write, create, or save a file.
+- Pure conceptual explanations, theories, or general knowledge (e.g., "What is Linux?", "Explain Python").
+- Generating code snippets in text without requesting to run or save them to disk.
 - Casual greetings or general conversational chat.
 
 WHEN IN DOUBT -> ALWAYS SET needs_tool = True.
