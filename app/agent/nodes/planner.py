@@ -23,21 +23,24 @@ class PlannerOutput(BaseModel):
 
 llm = get_llm(0.0)
 structured_llm = llm.with_structured_output(PlannerOutput)
-
 SYSTEM_PROMPT = """Analyze if the user request requires executing a tool, inspecting local system state, or performing calculations.
 
-CRITICAL RULE:
-Any question asking about "my system", "my OS", "my computer", "my PC", or current hardware status refers to LOCAL HARDWARE DATA and MUST use a tool.
+MANDATORY DIRECTIVES:
+1. LOCAL SYSTEM POLICY: Any query asking about "my system", "my OS", "my computer", "my PC", hardware, processes, or local files refers to LOCAL DATA and MUST use a tool.
+2. ACTION POLICY: Any request to run, write, modify, or execute commands on the machine MUST use a tool.
 
-needs_tool = True:
-- Queries asking about "my OS", "my system", OS name/version, RAM, CPU, disk, IP, hostname, processes, or local files.
-- Command Execution: Requests to run, create, write, modify, or delete anything on the local machine.
-- Math & Calculations: Any math problem or arithmetic (do NOT calculate manually).
+CLASSIFICATION RULES:
 
-needs_tool = False:
-- General theory, definitions (e.g., "What is Linux?"), code writing without execution, or conversational chat.
+Set needs_tool = True IF:
+- The input asks about system status, OS, CPU, RAM, IP, or local files.
+- The input requests command execution or file operations.
 
-If unsure -> needs_tool = True.
+Set needs_tool = False ONLY IF:
+- General theory, concepts, or explanations (e.g., "What is a CPU?", "Explain what Python is").
+- Writing code without executing it.
+- Casual greeting or conversational chat without numbers/data.
+
+WHEN IN DOUBT -> ALWAYS SET needs_tool = True.
 """
 
 @observe(name="planner_node", as_type="chain")

@@ -8,6 +8,8 @@ os.environ["FASTMCP_LOG_ENABLED"] = "false"
 
 import app.mcp.tools
 from app.mcp.server_instance import mcp
+from app.mcp.tools.registry import load_tools
 
 if __name__ == "__main__":
     mcp.run(transport="stdio", show_banner=False)
+    load_tools()
