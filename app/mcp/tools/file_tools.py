@@ -91,3 +91,57 @@ def create_file(
             "status": "error",
             "message": f"Failed to create file: {str(e)}"
         }, indent=2)
+
+@mcp.tool()
+def delete_file(
+    target: str = Field(
+        ...,
+        description=(
+            "The filename OR full file path to delete. "
+            "Examples: 'notes.txt' (deletes from default Downloads) or '/home/user/docs/old.txt' (deletes exact path)."
+        )
+    )
+) -> str:
+    """Delete a specified file from disk. 
+    Accepts either a single filename (searches in default Downloads) or an absolute/relative file path.
+
+    EXAMPLES OF VALID TOOL CALLS:
+    - User: 'Borra el archivo python_properties.txt'
+      Args: {"target": "python_properties.txt"}
+
+    - User: 'Elimina el archivo /tmp/test.log'
+      Args: {"target": "/tmp/test.log"}
+    """
+    try:
+        target_path = Path(target)
+
+        if target_path.is_absolute() or len(target_path.parts) > 1:
+            resolved_path = target_path.resolve()
+        else:
+            resolved_path = (get_default_downloads_dir() / target).resolve()
+
+        if not resolved_path.exists():
+            return json.dumps({
+                "status": "error",
+                "message": f"File '{resolved_path}' does not exist."
+            }, indent=2)
+
+        if resolved_path.is_dir():
+            return json.dumps({
+                "status": "error",
+                "message": f"'{resolved_path}' is a directory, not a file. Use a directory deletion tool instead."
+            }, indent=2)
+
+        resolved_path.unlink()
+
+        return json.dumps({
+            "status": "success",
+            "message": f"File '{resolved_path.name}' deleted successfully.",
+            "deleted_path": str(resolved_path)
+        }, indent=2)
+
+    except Exception as e:
+        return json.dumps({
+            "status": "error",
+            "message": f"Failed to delete file: {str(e)}"
+        }, indent=2)
