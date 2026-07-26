@@ -23,26 +23,25 @@ class PlannerOutput(BaseModel):
 
 llm = get_llm(0.0)
 structured_llm = llm.with_structured_output(PlannerOutput)
-SYSTEM_PROMPT = """Analyze if the user request requires executing a tool, inspecting local system state, or performing calculations.
+
+SYSTEM_PROMPT = """Analyze if the user request requires executing a tool, inspecting local system state, or performing file operations.
 
 MANDATORY DIRECTIVES:
-1. LOCAL SYSTEM POLICY: Any query asking about "my system", "my OS", "my computer", "my PC", hardware, processes, or local files refers to LOCAL DATA and MUST use a tool.
-2. ACTION POLICY: Any request to run, write, modify, or execute commands on the machine MUST use a tool.
-
-FILE OPERATIONS RULE:
-- When asked to create, write, or save a file, use 'create_file'.
-- Ensure 'file_path' is a valid string path.
+1. ACTION OVER CONTENT RULE (CRITICAL): If the user request contains action verbs related to files (e.g., "create", "write", "generate", "save", "make", "delete", "crea", "escribe", "guarda") targeting disk/files, it MUST be classified as needs_tool = True, REGARDLESS of the topic or content requested.
+2. LOCAL SYSTEM POLICY: Any query asking about "my system", "my OS", "my computer", "my PC", hardware, processes, or local files refers to LOCAL DATA and MUST use a tool.
+3. COMMAND EXECUTION: Any request to run commands, scripts, or modify system files MUST use a tool.
 
 CLASSIFICATION RULES:
 
 Set needs_tool = True IF:
-- The input asks about system status, OS, CPU, RAM, IP, or local files.
-- The input requests command execution or file operations.
+- The user requests ANY file creation or modification, even if it involves generating text/code on a topic (e.g., "crea un archivo sobre Python", "write a note about history", "save a script").
+- The user asks about system status, OS, CPU, RAM, IP, processes, or local file lists.
+- The user requests running shell/terminal commands.
 
-Set needs_tool = False ONLY IF:
-- General theory, concepts, or explanations (e.g., "What is a CPU?", "Explain what Python is").
-- Writing code without executing it.
-- Casual greeting or conversational chat without numbers/data.
+Set needs_tool = False STRICTLY ONLY IF:
+- Pure conceptual queries WITH NO FILE OR SYSTEM ACTION REQUESTED (e.g., "What is Linux?", "Explain Python", "How does TCP work?").
+- Writing code snippets in chat WITHOUT any request to write, create, or save a file.
+- Casual greetings or general conversational chat.
 
 WHEN IN DOUBT -> ALWAYS SET needs_tool = True.
 """
