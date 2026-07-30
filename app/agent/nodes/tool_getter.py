@@ -1,86 +1,48 @@
 # app/agent/nodes/tool_getter.py
-from typing import Any, cast
-from pydantic import BaseModel, Field
-from langchain_core.messages import SystemMessage, HumanMessage
+from typing import cast
+from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage
+from app.agent.observability import observe
 from app.agent.state import AgentState
 from app.agent.llm import get_llm
 from app.agent.mcp_adapter import get_mcp_tools
 
-class ToolCall(BaseModel):
-    tool_name: str = Field(description="The exact name of the selected tool.")
-    tool_args: dict[str, Any] = Field(default_factory=dict, description="Arguments matching the tool schema.")
-
-class ToolSelectionOutput(BaseModel):
-    tools: list[ToolCall] = Field(default_factory=list)
-    reasoning: str = Field(description="Why these specific tools were chosen.")
-
 llm = get_llm(temperature=0.0)
-structured_llm = llm.with_structured_output(ToolSelectionOutput)
 
 SYSTEM_PROMPT = """You are the Tool Selection Module for SystemPilot.
 
-Select necessary tools to fulfill the user request.
+Your job is to select the appropriate tool(s) and populate their arguments strictly matching their defined input schemas.
 
-STRICT ARGUMENT RULES:
-1. ONLY pass arguments that are explicitly defined in the tool's inputSchema.
-2. DO NOT invent extra parameters or flags.
-3. If a tool requires NO arguments, pass an empty object {{}}.
-
-AVAILABLE TOOLS:
-{tools_schema}
-
-DISCARDED TOOLS:
-{discarded_tools}
+GENERAL DIRECTIVES:
+1. ARGUMENT COMPLETENESS: If a tool requires content, text, or query generation (e.g., writing an essay, crafting a script, summarizing text), GENERATE the full required content inside the appropriate tool argument.
+2. CONTEXTUAL REUSE: If previous tool execution results are provided in the context, REUSE relevant data (such as absolute paths, IDs, or search hits) to populate the arguments for subsequent tool calls.
+3. SCHEMA STRICTNESS: Only pass arguments defined in the tool's input schema. Do not invent extra parameters.
 """
 
-def sanitize_args(proposed_args: dict[str, Any], schema: dict[str, Any]) -> dict[str, Any]:
-    """Filters out any arguments not defined in the tool's inputSchema."""
-    if not schema or "properties" not in schema:
-        return {}
-    
-    allowed_keys = set(schema["properties"].keys())
-    sanitized = {k: v for k, v in proposed_args.items() if k in allowed_keys}
-    
-    removed_keys = set(proposed_args.keys()) - allowed_keys
-    # if removed_keys:
-    #     print(f"⚠️ [SANITIZER] Removed disallowed arguments: {removed_keys}")
-        
-    return sanitized
-
+@observe(name="tool_getter_node", as_type="chain")
 async def tool_getter_node(state: AgentState) -> dict:
     user_input = state["input"]
     discarded = state.get("discarded_tools", [])
+    tool_results = state.get("tool_results", [])
     
-    all_tools = await get_mcp_tools()
-    available_tools = [t for t in all_tools if t["name"] not in discarded]
+    all_tools = await get_mcp_tools() 
+    available_tools = [t for t in all_tools if t["name"] not in discarded]    
     
-    tool_schemas = {t["name"]: t.get("inputSchema", {}) for t in available_tools}
+    llm_with_tools = llm.bind_tools(available_tools)
     
-    tools_str = "\n".join(
-        [f"- Name: {t['name']}\n  Description: {t['description']}\n  Schema: {t.get('inputSchema', {})}" for t in available_tools]
-    )
-    discarded_str = ", ".join(discarded) if discarded else "None"
+    messages: list[BaseMessage] = [SystemMessage(content=SYSTEM_PROMPT)]    
+
+    if tool_results:
+        messages.append(HumanMessage(
+            content=f"Original Request: {user_input}\n\nPrevious Tool Results:\n{tool_results}"
+        ))
+    else:
+        messages.append(HumanMessage(content=f"User Request: {user_input}"))
     
-    formatted_system_prompt = SYSTEM_PROMPT.format(
-        tools_schema=tools_str if tools_str else "NO TOOLS AVAILABLE",
-        discarded_tools=discarded_str
-    )
+    response = await llm_with_tools.ainvoke(messages)
     
-    messages = [
-        SystemMessage(content=formatted_system_prompt),
-        HumanMessage(content=f"User Request: {user_input}")
+    selected_tools_payload = [
+        {"name": tc["name"], "args": tc["args"]} 
+        for tc in (response.tool_calls or [])
     ]
-    
-    response = cast(ToolSelectionOutput, await structured_llm.ainvoke(messages))
-    
-    selected_tools_payload = []
-    for tool in response.tools:
-        if tool.tool_name in tool_schemas:
-            clean_args = sanitize_args(tool.tool_args, tool_schemas[tool.tool_name])
-            selected_tools_payload.append({"name": tool.tool_name, "args": clean_args})
 
-    # print(f"[DEBUG Tool Getter] Selected and validated tools: {selected_tools_payload}\n")
-
-    return {
-        "selected_tools": selected_tools_payload
-    }
+    return {"selected_tools": selected_tools_payload}

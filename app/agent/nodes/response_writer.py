@@ -1,5 +1,6 @@
 # app/agent/nodes/response_writer.py
 from langchain_core.messages import SystemMessage, HumanMessage
+from app.agent.observability import observe
 from app.agent.state import AgentState
 from app.agent.llm import get_llm
 
@@ -16,6 +17,7 @@ Example fallback response:
 "I am currently unable to retrieve that information from your system."
 """
 
+@observe(name="response_writer_node", as_type="generation")
 async def response_writer_node(state: AgentState) -> dict:
     user_input = state["input"]
     tool_results = state.get("tool_results", [])
