@@ -48,8 +48,16 @@ class CommandLineInterface:
         try:
             user_input = self.session.prompt(USER_PREFIX)
             return user_input.strip()
-        
+
         except KeyboardInterrupt:
+            current_buffer = getattr(self.session.app, "current_buffer", None)
+
+            if current_buffer is not None and getattr(current_buffer, "text", ""):
+                current_buffer.reset()
+                current_buffer.text = ""
+                current_buffer.cursor_position = 0
+                return ""
+
             self.console.print(EXIT_MESSAGE_INTERRUPT)
             sys.exit(0)
 
@@ -70,7 +78,7 @@ class CommandLineInterface:
         
         full_response = ""
         
-        # 1. First, process and render status messages directly to console
+        # First, process and render status messages directly to console
         # (they are short strings that end with a newline)
         for chunk in stream_generator:
             if chunk.startswith("[dim]"):
@@ -80,7 +88,7 @@ class CommandLineInterface:
                 full_response += chunk
                 break
 
-        # 2. Render only the model's actual response inside Live(Markdown)
+        # Render only the model's actual response inside Live(Markdown)
         if full_response:
             with Live(console=self.console, refresh_per_second=12, auto_refresh=False) as live:
                 # Render the first captured token
