@@ -1,11 +1,15 @@
 import os
+import asyncio
 from typing import cast
 from pydantic import BaseModel, Field
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.runnables import RunnableConfig
+
 from app.agent.observability import observe
 from app.agent.state import AgentState
 from app.agent.llm import get_llm
+from app.agent.config import LLM_TIMEOUT
+
 
 class PlannerOutput(BaseModel):
     reasoning: str = Field(
@@ -56,8 +60,11 @@ needs_tool: True
 
 
 @observe(name="planner_node", as_type="chain")
-def planner_node(state: AgentState) -> dict:
-    """Planner Node: Evaluates user input and decides whether tools are required."""
+async def planner_node(state: AgentState, config: RunnableConfig | None = None) -> dict:
+    """Planner Node: Evaluates user input and decides whether tools are required.
+    
+    Includes an explicit timeout and error state handling.
+    """
     user_input = state["input"]
 
     messages = [
@@ -65,9 +72,32 @@ def planner_node(state: AgentState) -> dict:
         HumanMessage(content=user_input)
     ]
 
-    response = cast(PlannerOutput, structured_llm.invoke(messages))    
-    
-    return {
-        "needs_tool": response.needs_tool,
-        "planner_reasoning": response.reasoning
-    }
+    configurable = config.get("configurable", {}) if config else {}
+    timeout_seconds = configurable.get("planner_timeout", LLM_TIMEOUT)
+
+    try:
+        response = await asyncio.wait_for(
+            structured_llm.ainvoke(messages),
+            timeout=float(timeout_seconds)
+        )
+        response = cast(PlannerOutput, response)
+
+        return {
+            "needs_tool": response.needs_tool,
+            "planner_reasoning": response.reasoning,
+            "error": None
+        }
+
+    except asyncio.TimeoutError:
+        return {
+            "needs_tool": False,
+            "planner_reasoning": f"Planner node timed out after {timeout_seconds} seconds.",
+            "error": "PLANNER_TIMEOUT"
+        }
+
+    except Exception as e:
+        return {
+            "needs_tool": False,
+            "planner_reasoning": f"Planner execution failed: {str(e)}",
+            "error": "PLANNER_ERROR"
+        }

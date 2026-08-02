@@ -7,3 +7,4 @@ class AgentState(TypedDict):
     selected_tools: list[dict[str, Any]]
     tool_results: list[dict[str, Any]]
     final_response: str
+    error: str | None

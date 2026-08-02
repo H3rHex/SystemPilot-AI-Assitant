@@ -18,3 +18,5 @@ USE_LANGFUSE = os.getenv("USE_LANGFUSE", "false").lower() in {
     "yes",
     "on",
 }
+
+LLM_TIMEOUT = os.getenv("LLM_TIMEOUT")

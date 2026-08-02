@@ -19,7 +19,8 @@ class AgentEngine:
             "needs_tool": False,
             "selected_tools": [],
             "tool_results": [],
-            "final_response": ""
+            "final_response": "",
+            "error":""
         }
 
         try:
@@ -31,7 +32,7 @@ class AgentEngine:
                     kind = event["event"]
                     name = event.get("name", "")
 
-                    if kind == "on_chain_end" and name in ["planner", "tool_getter", "tool_runner"]:
+                    if kind == "on_chain_end" and name in ["planner", "tool_getter", "tool_runner","fallback_node"]:
                         output = event["data"].get("output", {})
 
                         if name == "planner":
@@ -49,7 +50,11 @@ class AgentEngine:
                         elif name == "tool_runner":
                             results = output.get("tool_results", [])
                             if results:
-                                yield "[dim][[italic]Execution[/italic]] Fetching system data...[/dim]\n\n"
+                                yield "[dim][[italic]Execution[/italic]] Fetching system data...[/dim]\n"
+
+                        elif name == "fallback_node":
+                            fallback_msg = output.get("final_response") or output.get("output") or "An unexpected error occurred."
+                            yield f"[dim][bold red]{fallback_msg}[/bold red][/dim]\n"
 
                     # Only stream LLM tokens emitted inside the response_writer node
                     elif kind == "on_chat_model_stream":
