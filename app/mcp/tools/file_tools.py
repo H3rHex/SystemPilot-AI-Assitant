@@ -1,6 +1,7 @@
 import os
 import json
 import fnmatch
+from itertools import islice
 from pathlib import Path
 from typing import Any
 from pydantic import Field, AliasChoices
@@ -114,8 +115,8 @@ def create_file(
     path: str = Field(
         ...,
         validation_alias=AliasChoices(
-            "path", "filename", "file_name", "target",
-            "{path}", "{filename}", "{file_name}", "{target}"
+            "target", "path", "filename", "file_path", "file_name", "file", "f",
+            "{target}", "{path}", "{filename}", "{file_path}", "{file_name}"
         ),
         description="Target file path or filename to create."
     ),
@@ -134,6 +135,11 @@ def create_file(
 
     EXAMPLES OF VALID TOOL CALLS:
     Args: {"path": "notes.txt", "content": "Hello world"}
+    
+    Use this tool ONLY when explicitly requested to write a NEW file 
+    or overwrite content on disk. 
+    DO NOT use this tool to answer questions about existing files.
+
     """
     try:
         target_file_path = resolve_file_path(path)
@@ -221,3 +227,53 @@ def list_directory(
 
     except Exception as e:
         return error_response(f"Failed to list directory: {str(e)}")
+
+from itertools import islice
+from pydantic import Field, AliasChoices
+
+@mcp.tool()
+def read_file(
+    target: str = Field(
+        ...,
+        validation_alias=AliasChoices(
+            "target", "path", "filename", "file_path", "file_name", "file", "f",
+            "{target}", "{path}", "{filename}", "{file_path}", "{file_name}"
+        ),
+        description="Absolute or relative file path to read."
+    ),
+    start_line: int = Field(
+        0,
+        description="Starting line number (0-indexed, inclusive). Default 0."
+    ),
+    end_line: int = Field(
+        -1,
+        description="Ending line number (0-indexed, exclusive). Use -1 to read the entire file."
+    )
+) -> str:
+    """Read, inspect, analyze, or summarize the contents of an existing text file.
+
+    EXAMPLES OF VALID TOOL CALLS:
+    Args: {"target": "/home/user/document.txt"}
+    Args: {"target": "notes.txt", "start_line": 0, "end_line": 50}
+
+    ALWAYS use this tool when the user asks to read, explain, inspect, or summarize a file.
+    DO NOT use `create_file` or any other tool when the user asks about an existing file's content.
+    """
+    try:
+        path = resolve_file_path(target)
+        
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            if end_line == -1:
+                selected_lines = list(islice(f, start_line, None))
+            else:
+                stop = max(start_line, end_line)
+                selected_lines = list(islice(f, start_line, stop))
+
+        content_str = "".join(selected_lines)
+
+        return success_response(
+            content=content_str
+        )
+
+    except Exception as e:
+        return error_response(f"Error reading file '{target}': {str(e)}")
