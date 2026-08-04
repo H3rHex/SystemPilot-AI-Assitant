@@ -17,6 +17,8 @@ class AgentEngine:
         initial_state: AgentState = {
             "input": prompt,
             "needs_tool": False,
+            "needs_another_tool": False,
+            "next_tool_step_count": 0,
             "selected_tools": [],
             "tool_results": [],
             "final_response": "",
