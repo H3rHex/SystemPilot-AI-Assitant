@@ -228,9 +228,6 @@ def list_directory(
     except Exception as e:
         return error_response(f"Failed to list directory: {str(e)}")
 
-from itertools import islice
-from pydantic import Field, AliasChoices
-
 @mcp.tool()
 def read_file(
     target: str = Field(
@@ -277,3 +274,91 @@ def read_file(
 
     except Exception as e:
         return error_response(f"Error reading file '{target}': {str(e)}")
+
+@mcp.tool()
+def rename_file(
+    path: str = Field(
+        validation_alias=AliasChoices(
+            "target", "path", "filename", "file_path", "file_name", "file", "f",
+            "{target}", "{path}", "{filename}", "{file_path}", "{file_name}"
+        ),
+        description="Absolute or relative file path to read."
+    ),
+    new_name: str = Field(
+        ...,
+        validation_alias=AliasChoices(
+            "new_name", "new_filename", "new_file_path", "new_file_name",
+            "{new_name}", "{new_filename}", "{new_file_path}", "{new_file_name}"
+        ),
+        description="New name for the file (can include a new path)."
+    )
+
+) -> str:
+    """Rename a specified file on disk.
+    Args: {"target": "notes.txt", "new_name": "updated_notes.txt"}
+    
+    Use this tool ONLY when explicitly requested to rename a file on disk.    
+    """
+
+    try:
+        original_path = resolve_file_path(path)
+        new_path = resolve_file_path(new_name)
+
+        if not original_path.exists():
+            return error_response(f"File '{original_path}' does not exist.")
+
+        if new_path.exists():
+            return error_response(f"Target file '{new_path}' already exists. Choose a different name.")
+
+        original_path.rename(new_path)
+
+        return success_response(
+            message=f"File renamed successfully from '{original_path.name}' to '{new_path.name}'.",
+            old_path=str(original_path),
+            new_path=str(new_path)
+        )
+
+    except Exception as e: 
+        return error_response(f"Failed to rename file: {str(e)}")
+
+@mcp.tool()
+def move_file(
+    source: str = Field(
+        ...,
+        validation_alias=AliasChoices(
+            "source", "source_path", "source_file", "src", "src_path", "src_file",
+            "{source}", "{source_path}", "{source_file}", "{src}", "{src_path}", "{src_file}"
+        ),
+        description="Absolute or relative path of the file to move."
+    ),
+    destination: str = Field(
+        ...,
+        validation_alias=AliasChoices(
+            "destination", "dest", "dest_path", "dest_file",
+            "{destination}", "{dest}", "{dest_path}", "{dest_file}"
+        ),
+        description="Absolute or relative path where the file should be moved."
+    )
+) -> str:
+    try:
+        source_path = resolve_file_path(source)
+        destination_path = resolve_file_path(destination)
+
+        if not source_path.exists():
+            return error_response(f"Source file '{source_path}' does not exist.")
+
+        if destination_path.exists():
+            return error_response(f"Destination '{destination_path}' already exists. Choose a different destination.")
+
+        destination_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path.rename(destination_path)
+
+        return success_response(
+            message=f"File moved successfully from '{source_path}' to '{destination_path}'.",
+            old_path=str(source_path),
+            new_path=str(destination_path)
+        )
+    
+    except Exception as e:
+        return error_response(f"Failed to move file: {str(e)}")
+    return ""
