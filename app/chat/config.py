@@ -3,7 +3,7 @@
 # 1. Welcome Banner (Using Rich gradient simulation and sleek clean dividers)
 WELCOME_BANNER = """
 [bold cyan]┌────────────────────────────────────────────────────────┐[/bold cyan]
-[bold cyan]│[/bold cyan]  [bold turquoise2]SystemPilot[/bold turquoise2] [bold white]Alpha[/bold white] [dim]|[/dim] [italic royal_blue1]Native OS Copilot[/italic royal_blue1]       [bold cyan]│[/bold cyan]
+[bold cyan]│[/bold cyan]  [bold turquoise2]SystemPilot[/bold turquoise2] [bold white]Alpha[/bold white] [dim]|[/dim] [italic royal_blue1]Native OS Copilot[/italic royal_blue1]                 [bold cyan]│[/bold cyan]
 [bold cyan]└────────────────────────────────────────────────────────┘[/bold cyan]
  [dim]• Type[/dim] [bold red]/exit[/bold red] [dim]or[/dim] [bold red]/quit[/bold red] [dim]to terminate the session.[/dim]
  [dim]• Type[/dim] [bold spring_green3]/clear[/bold spring_green3] [dim]or press[/dim] [bold spring_green3]Ctrl+L[/bold spring_green3] [dim]to wipe the terminal screen.[/dim]
