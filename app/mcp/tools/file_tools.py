@@ -198,6 +198,10 @@ def delete_file(
 def list_directory(
     path: str = Field(
         "default",
+        validation_alias=AliasChoices(
+                    "target", "path", "filename", "file_path", "file_name","input"
+                    "{target}", "{path}", "{filename}", "{file_path}", "{file_name}","{input}"
+                ),
         description="Directory path to inspect. Pass 'default'/'home' for user home, 'downloads' for Downloads."
     )
 ) -> str:
