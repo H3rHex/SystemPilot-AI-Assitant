@@ -321,3 +321,44 @@ def rename_file(
     except Exception as e: 
         return error_response(f"Failed to rename file: {str(e)}")
 
+@mcp.tool()
+def move_file(
+    source: str = Field(
+        ...,
+        validation_alias=AliasChoices(
+            "source", "source_path", "source_file", "src", "src_path", "src_file",
+            "{source}", "{source_path}", "{source_file}", "{src}", "{src_path}", "{src_file}"
+        ),
+        description="Absolute or relative path of the file to move."
+    ),
+    destination: str = Field(
+        ...,
+        validation_alias=AliasChoices(
+            "destination", "dest", "dest_path", "dest_file",
+            "{destination}", "{dest}", "{dest_path}", "{dest_file}"
+        ),
+        description="Absolute or relative path where the file should be moved."
+    )
+) -> str:
+    try:
+        source_path = resolve_file_path(source)
+        destination_path = resolve_file_path(destination)
+
+        if not source_path.exists():
+            return error_response(f"Source file '{source_path}' does not exist.")
+
+        if destination_path.exists():
+            return error_response(f"Destination '{destination_path}' already exists. Choose a different destination.")
+
+        destination_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path.rename(destination_path)
+
+        return success_response(
+            message=f"File moved successfully from '{source_path}' to '{destination_path}'.",
+            old_path=str(source_path),
+            new_path=str(destination_path)
+        )
+    
+    except Exception as e:
+        return error_response(f"Failed to move file: {str(e)}")
+    return ""
