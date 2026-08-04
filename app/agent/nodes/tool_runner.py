@@ -15,13 +15,15 @@ async def tool_runner_node(state: AgentState) -> dict:
         
         try:
             result = await execute_mcp_tool(name, args)
-            new_results.append({"tool": name, "result": result})
+            new_results.append({
+                "tool": name,
+                "args": args,
+                "result": result
+            })
         except Exception as e:
             new_results.append({"tool": name, "error": str(e)})
 
-    updated_tool_results = current_history + new_results
-
     return {
-        "tool_results": updated_tool_results,
+        "tool_results": current_history + new_results,
         "selected_tools": []  
     }
