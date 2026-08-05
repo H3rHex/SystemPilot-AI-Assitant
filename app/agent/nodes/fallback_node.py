@@ -6,10 +6,8 @@ from app.agent.state import AgentState
 def fallback_node(state: AgentState) -> dict:
     """Fallback node to immediately return a static error response upon critical failure."""
     
-    # Extraemos el error registrado, por defecto UNKNOWN_ERROR
     error_type = state.get("error") or "UNKNOWN_ERROR"
     
-    # Diccionario con respuestas amigables para los errores conocidos
     error_messages = {
         "PLANNER_TIMEOUT": "The planning system took too long to respond. Please try simplifying your request.",
         "PLANNER_ERROR": "I encountered an internal error while trying to plan the task. Please try again.",
@@ -17,13 +15,11 @@ def fallback_node(state: AgentState) -> dict:
         "EVALUATOR_ERROR": "I had trouble evaluating the results of the actions taken. Please check the system state manually."
     }
     
-    # Obtenemos el mensaje predefinido o un mensaje genérico con el código de error
     fallback_message = error_messages.get(
         error_type, 
         f"An unexpected system error occurred ({error_type}). Please try again."
     )
 
-    # Devolvemos final_response (acorde al AgentState) y marcamos la fase como 'error'
     return {
         "final_response": fallback_message,
         "phase": "error"
