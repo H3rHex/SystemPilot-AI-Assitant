@@ -1,104 +1,120 @@
-# app/agent/nodes/next_tool_step_evaluator.py
 import asyncio
 from typing import Any, cast
 
-from pydantic import BaseModel, Field
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
+from pydantic import BaseModel, Field
 
+from app.agent.config import LLM_TIMEOUT
+from app.agent.llm import get_llm
 from app.agent.observability import observe
 from app.agent.state import AgentState
-from app.agent.llm import get_llm
 
-
-class StepEvaluatorOutput(BaseModel):
+class EvaluatorOutput(BaseModel):
     reasoning: str = Field(
-        description=(
-            "Step-by-step evaluation comparing the user's intent against completed tool results. "
-            "Explicitly list: 1) Completed actions, 2) Pending or unfulfilled actions."
-        )
+        description="Brief reasoning on whether the main goal is achieved based on the latest tool results."
     )
-    needs_another_tool: bool = Field(
-        description=(
-            "MUST be True if ANY requested action, conditional step, or follow-up operation "
-            "remains unexecuted. MUST be False ONLY when ALL user goals are completely satisfied."
-        )
+    goal_met: bool = Field(
+        description="True ONLY if the original goal is completely fulfilled. False otherwise."
+    )
+    extracted_facts: list[dict[str, str]] = Field(
+        description="List of new facts discovered (e.g., {'key': 'found_files', 'value': 'file1.txt, file2.txt'}). Empty list if nothing new.",
+        default_factory=list
+    )
+    new_pending_targets: list[str] = Field(
+        description="List of specific paths, filenames, or IDs that need subsequent actions. Empty if none.",
+        default_factory=list
     )
 
 llm = get_llm(0.0)
-structured_llm = llm.with_structured_output(StepEvaluatorOutput)
+structured_llm = llm.with_structured_output(EvaluatorOutput)
 
-SYSTEM_PROMPT = """You are the Task Completion Evaluator for SystemPilot.
+SYSTEM_PROMPT = """You are the Result Evaluator for an AI agent.
+Your job is to read the latest tool execution result and decide if the user's primary GOAL has been met.
 
-Your sole responsibility is to compare the Original User Request against the Executed Tools History to determine if additional tool calls are required.
-
-EVALUATION PROTOCOL:
-1. DISSECT INTENT: Identify all primary, secondary, and conditional actions requested by the user (e.g., "Do X, and if Y then do Z").
-2. AUDIT HISTORY: Match each requested action against the tools already executed in the history.
-3. IDENTIFY GAPS: Determine if any requested action, sub-task, or conditional trigger remains unfulfilled.
-
-STRICT DECISION RULES:
-- If ANY part of the user's request (including conditional or follow-up steps) has NOT been executed, set `needs_another_tool = True`.
-- Set `needs_another_tool = False` ONLY AND EXCLUSIVELY if every single action requested by the user is fully satisfied by the executed tools history.
-
-CRITICAL CONSISTENCY MANDATE:
-- Your `needs_another_tool` boolean value MUST strictly align with your `reasoning`. 
-- If your reasoning mentions a pending action, unfulfilled request, or next step, setting `needs_another_tool = False` IS A CRITICAL ERROR.
+RULES:
+1. Compare the GOAL against the actual output of the last executed tool.
+2. If the goal requires acting on multiple items (e.g., 'delete all txt files'), and you just found the files, the goal is NOT met yet (you must return them in new_pending_targets).
+3. If the tool returned an error, the goal is likely NOT met, unless it's a safe failure.
+4. Extract any useful persistent information into 'extracted_facts'.
+5. If further action is needed on specific items, list them in 'new_pending_targets'.
 """
 
-
-def format_tool_results(tool_results: list[dict[str, Any]]) -> str:
-    if not tool_results:
-        return "No tools executed yet."
-
-    recent = tool_results[-3:]
-    summary = []
-    for i, item in enumerate(recent, 1):
-        tool_name = item.get("tool", "unknown_tool")
-        args = item.get("args", {})
-        result = item.get("result", item.get("error", ""))
-        result_text = str(result).strip()
-        if len(result_text) > 900:
-            result_text = result_text[:900] + "..."
-        summary.append(f"{i}. {tool_name}({args}) -> Result:\n{result_text}")
-
-    return "\n---\n".join(summary)
-
-
-@observe(name="next_tool_step_evaluator", as_type="chain")
-async def next_tool_step_evaluator(state: AgentState, config: RunnableConfig | None = None) -> dict:
-    user_input = state["input"]
+@observe(name="state_evaluator_node", as_type="chain")
+async def state_evaluator_node(state: AgentState, config: RunnableConfig | None = None) -> dict:
+    goal = state.get("goal", "Unknown goal")
     tool_results = state.get("tool_results", [])
-    current_step_count = state.get("next_tool_step_count", 0) + 1
+    current_facts = state.get("facts", [])
+    working_memory = state.get("working_memory", {}) or {}
+    pending_targets = working_memory.get("pending_targets", [])
+    step_count = state.get("next_tool_step_count", 0)
+    
+    if step_count >= 10:
+        return {
+            "phase": "finalize",
+            "error": "MAX_STEPS_REACHED"
+        }
 
-    formatted_history = format_tool_results(tool_results)
+    if not tool_results:
+        return {"phase": "finalize"}
 
-    evaluation_context = (
-        f"Original User Request: {user_input}\n\n"
-        f"Executed Tools History:\n{formatted_history}"
-    )
-
+    last_result = tool_results[-1]
+    
     messages = [
         SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=evaluation_context)
+        HumanMessage(
+            content=(
+                f"GOAL: {goal}\n\n"
+                f"LAST TOOL EXECUTED: {last_result.get('tool')}\n"
+                f"ARGS USED: {last_result.get('args')}\n"
+                f"RESULT OUTPUT:\n{last_result.get('result') or last_result.get('error')}\n\n"
+                f"CURRENT PENDING TARGETS: {pending_targets}"
+            )
+        )
     ]
 
+    configurable = config.get("configurable", {}) if config else {}
+    timeout_seconds = configurable.get("evaluator_timeout", LLM_TIMEOUT)
+
     try:
-        response = await structured_llm.ainvoke(messages)
-        if isinstance(response, dict):
-            response = StepEvaluatorOutput(**response)
+        response = await asyncio.wait_for(
+            structured_llm.ainvoke(messages),
+            timeout=float(timeout_seconds),
+        )
+        response = cast(EvaluatorOutput, response)
+
+        new_facts = current_facts.copy()
+        for fact in response.extracted_facts:
+            new_facts.append({
+                "key": fact.get("key", "unknown"),
+                "value": fact.get("value", ""),
+                "type": "string",
+                "source": "evaluator",
+                "metadata": {}
+            })
+
+        updated_targets = response.new_pending_targets
+        if not updated_targets and pending_targets:
+            updated_targets = pending_targets[1:] # Dequeue the first target if no new ones are added, assuming it was processed.
+
+        if response.goal_met or (not updated_targets and not response.new_pending_targets and last_result.get("tool") != "list_directory"):
+            next_phase = "finalize"
+        else:
+            # If there are still pending targets or new ones, we continue to the next tool execution phase.
+            next_phase = "execute" if updated_targets else "inspect"
 
         return {
-            "needs_another_tool": response.needs_another_tool,
-            "step_evaluator_reasoning": response.reasoning,
-            "next_tool_step_count": current_step_count,
-            "error": None
+            "phase": next_phase,
+            "facts": new_facts,
+            "working_memory": {
+                **working_memory,
+                "pending_targets": updated_targets,
+                "evaluator_reasoning": response.reasoning
+            }
         }
 
     except Exception as e:
         return {
-            "needs_another_tool": False,
-            "step_evaluator_reasoning": f"Step evaluator execution failed: {str(e)}",
-            "next_tool_step_count": current_step_count,
-            "error": "STEP_EVALUATOR_ERROR"
+            "phase": "finalize",
+            "error": f"EVALUATOR_ERROR: {str(e)}"
         }
