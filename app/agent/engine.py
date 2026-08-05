@@ -16,11 +16,20 @@ class AgentEngine:
         """Orchestrates graph execution, yielding clean status updates and live final text tokens."""
         initial_state: AgentState = {
             "input": prompt,
+            "phase": "plan",
+            "goal": None,
+            "context": {},
+            "facts": [],
+            "working_memory": {},
             "needs_tool": False,
+            "needs_another_tool": False,
+            "next_tool_step_count": 0,
+            "last_tool_name": None,
+            "last_tool_args": {},
             "selected_tools": [],
             "tool_results": [],
             "final_response": "",
-            "error":""
+            "error": ""
         }
 
         try:
