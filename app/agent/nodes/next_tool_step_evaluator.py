@@ -40,8 +40,8 @@ RULES:
 5. If further action is needed on specific items, list them in 'new_pending_targets'.
 """
 
-@observe(name="state_evaluator_node", as_type="chain")
-async def state_evaluator_node(state: AgentState, config: RunnableConfig | None = None) -> dict:
+@observe(name="next_tool_step_evaluator", as_type="chain")
+async def next_tool_step_evaluator(state: AgentState, config: RunnableConfig | None = None) -> dict:
     goal = state.get("goal", "Unknown goal")
     tool_results = state.get("tool_results", [])
     current_facts = state.get("facts", [])

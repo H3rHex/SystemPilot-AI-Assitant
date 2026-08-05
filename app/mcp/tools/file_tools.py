@@ -114,32 +114,29 @@ def find_files(
 def create_file(
     path: str = Field(
         ...,
-        validation_alias=AliasChoices(
-            "target", "path", "filename", "file_path", "file_name", "file", "f",
-            "{target}", "{path}", "{filename}", "{file_path}", "{file_name}"
-        ),
-        description="Target file path or filename to create."
+        validation_alias=AliasChoices("path", "target", "filename", "file_path", "file_name", "file"),
+        description="Target file path or filename to create (e.g., 'notes.txt' or '/path/to/file.txt')."
     ),
     content: str = Field(
         "",
-        validation_alias=AliasChoices("content", "{content}"),
-        description="Text content to write into the file."
+        validation_alias=AliasChoices("content", "text", "data"),
+        description="Text content to write inside the file."
     ),
     overwrite: bool = Field(
         True,
-        validation_alias=AliasChoices("overwrite", "{overwrite}"),
-        description="Overwrite existing file if True."
+        validation_alias=AliasChoices("overwrite", "force"),
+        description="Overwrite existing file if True. Defaults to True."
     )
 ) -> str:
-    """Create a text file on disk with content.
+    """Create a new text file on disk with the specified content.
+
+    LLM INSTRUCTIONS:
+    - ALWAYS use this tool when the user explicitly requests to create, write, generate, or save a file.
+    - DO NOT use this tool to inspect, read, or summarize existing files (use `read_file` instead).
 
     EXAMPLES OF VALID TOOL CALLS:
-    Args: {"path": "notes.txt", "content": "Hello world"}
-    
-    Use this tool ONLY when explicitly requested to write a NEW file 
-    or overwrite content on disk. 
-    DO NOT use this tool to answer questions about existing files.
-
+    Args: {"path": "notes.txt", "content": "hola mundo"}
+    Args: {"path": "/home/user/Downloads/notas.txt", "content": "hola mundo", "overwrite": True}
     """
     try:
         target_file_path = resolve_file_path(path)
@@ -158,7 +155,7 @@ def create_file(
 
     except Exception as e:
         return error_response(f"Failed to create file: {str(e)}")
-
+    
 @mcp.tool()
 def delete_file(
     target: str = Field(
