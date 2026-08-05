@@ -13,16 +13,22 @@ def route_planner(state: AgentState) -> str:
     if state.get("error"):
         return "fallback_node"
 
-    if state.get("needs_tool", False):
+    phase = state.get("phase")
+    if phase == "inspect" or state.get("needs_tool", False):
         return "tool_getter"
 
     return "response_writer"
+
 
 def route_next_tool_step_evaluator(state: AgentState) -> str:
     if state.get("error"):
         return "fallback_node"
 
-    if state.get("needs_another_tool", False):
+    phase = state.get("phase")
+    if phase == "inspect" and state.get("needs_another_tool", False):
+        return "tool_getter"
+
+    if phase in {"evaluate_results", "plan"} and state.get("needs_another_tool", False):
         return "tool_getter"
 
     return "response_writer"
