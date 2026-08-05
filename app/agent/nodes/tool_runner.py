@@ -17,12 +17,23 @@ def clean_mcp_result(result: Any) -> str:
 async def tool_runner_node(state: AgentState) -> dict:
     selected_tools = state.get("selected_tools", [])
     current_history = state.get("tool_results", [])
+    current_count = state.get("next_tool_step_count", 0)
     
+    if not selected_tools:
+        return {
+            "phase": "evaluate_results"
+        }
+
     new_results = []
+    last_name = None
+    last_args = {}
 
     for tool in selected_tools:
         name = str(tool.get("name"))
         args = tool.get("args", {})
+        
+        last_name = name
+        last_args = args
         
         try:
             raw_result = await execute_mcp_tool(name, args)
@@ -37,5 +48,9 @@ async def tool_runner_node(state: AgentState) -> dict:
 
     return {
         "tool_results": current_history + new_results,
-        "selected_tools": []  
+        "selected_tools": [], # This parametter is used to clear the selected tools after execution
+        "last_tool_name": last_name,
+        "last_tool_args": last_args,
+        "next_tool_step_count": current_count + 1,
+        "phase": "evaluate_results" 
     }
