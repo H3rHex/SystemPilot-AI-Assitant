@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, cast
+from typing import Any, List, cast, Literal
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
@@ -10,6 +10,10 @@ from app.agent.llm import get_llm
 from app.agent.observability import observe
 from app.agent.state import AgentState
 
+class PlanStep(BaseModel):
+    step_number: int
+    description: str
+    phase: Literal["inspect", "execute"]
 
 class PlannerOutput(BaseModel):
     reasoning: str = Field(
@@ -27,6 +31,7 @@ class PlannerOutput(BaseModel):
     context_summary: str = Field(
         description="Very short summary of what context is relevant to this request, without over-describing the environment."
     )
+    steps: List[PlanStep] = Field(description="Sequential execution plan steps")
 
 
 llm = get_llm(0.0)

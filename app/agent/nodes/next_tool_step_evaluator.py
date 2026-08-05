@@ -38,6 +38,9 @@ RULES:
 3. If the tool returned an error, the goal is likely NOT met, unless it's a safe failure.
 4. Extract any useful persistent information into 'extracted_facts'.
 5. If further action is needed on specific items, list them in 'new_pending_targets'.
+6. STRICT GOAL MATCHING: Evaluate tool results strictly against the exact literal text of the GOAL. 
+7. NO INFERRED FILTERS: You are strictly forbidden from inventing filters(e.g., assuming only '.txt' files), naming patterns, or conditions not explicitly stated in the GOAL.
+8. TARGET EXTRACTION: If the GOAL requests acting on multiple items (e.g., 'delete files in directory') and `list_directory` returned items, extract ALL eligible items into `new_pending_targets`.
 """
 
 @observe(name="next_tool_step_evaluator", as_type="chain")

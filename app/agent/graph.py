@@ -25,10 +25,17 @@ def route_next_tool_step_evaluator(state: AgentState) -> str:
         return "fallback_node"
 
     phase = state.get("phase")
-    if phase == "inspect" and state.get("needs_another_tool", False):
+    working_memory = state.get("working_memory", {})
+    pending_targets = working_memory.get("pending_targets", [])
+    
+    needs_tool = state.get("needs_another_tool", False)
+    
+    has_pending = len(pending_targets) > 0
+
+    if phase in {"inspect", "evaluate_results", "plan", "execute"} and (needs_tool or has_pending):
         return "tool_getter"
 
-    if phase in {"evaluate_results", "plan"} and state.get("needs_another_tool", False):
+    if not state.get("goal_met", False) and phase != "done":
         return "tool_getter"
 
     return "response_writer"
